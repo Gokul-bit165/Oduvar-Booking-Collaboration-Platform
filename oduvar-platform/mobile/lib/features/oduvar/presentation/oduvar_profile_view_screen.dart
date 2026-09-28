@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:oduvar_mobile/core/theme/app_theme.dart';
+import 'package:oduvar_mobile/features/services/models/service_model.dart';
+import 'package:oduvar_mobile/features/services/presentation/widgets/public_services_section.dart';
 import '../models/oduvar_profile_model.dart';
 import 'widgets/profile_widgets.dart';
 
@@ -8,11 +10,13 @@ import 'widgets/profile_widgets.dart';
 class OduvarProfileViewScreen extends StatelessWidget {
   final OduvarProfileModel profile;
   final bool isPreviewMode;
+  final List<OduvarServiceModel>? services;
 
   const OduvarProfileViewScreen({
     super.key,
     required this.profile,
     this.isPreviewMode = false,
+    this.services,
   });
 
   @override
@@ -77,7 +81,12 @@ class OduvarProfileViewScreen extends StatelessWidget {
                     'Collaboration',
                     _buildCollaborationInfo(),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
+                  if (services != null && services!.isNotEmpty) ...[
+                    PublicServicesSection(services: services!),
+                    const SizedBox(height: 20),
+                  ],
+                  const SizedBox(height: 12),
                   if (!isPreviewMode) _buildActionButtons(context),
                   const SizedBox(height: 40),
                 ],

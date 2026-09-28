@@ -35,3 +35,36 @@ export const SONG_CATEGORIES = [
   { key: 'OTHER', label: 'Other' },
 ] as const;
 export type SongCategory = typeof SONG_CATEGORIES[number]['key'];
+
+// Phase 3: Reference data — Service categories and predefined services
+export const SERVICE_CATEGORIES = ['Thevaram', 'Thiruvasagam', 'Thirupugazh', 'Other'] as const;
+export type ServiceCategory = typeof SERVICE_CATEGORIES[number];
+
+export const PREDEFINED_SERVICES = [
+  {
+    name: 'Thevaram Recital',
+    category: 'Thevaram',
+    description: 'Devotional recital of Thirumurai hymns composed by Appar, Sambandar, and Sundarar.',
+  },
+  {
+    name: 'Thiruvasagam Recital',
+    category: 'Thiruvasagam',
+    description: 'Deep, soulful rendering of Manikkavacakar’s profound devotional verses.',
+  },
+  {
+    name: 'Thirupugazh Rendition',
+    category: 'Thirupugazh',
+    description: 'Complex rhythmic and poetic devotional hymns praising Lord Murugan.',
+  },
+  {
+    name: 'Temple Pooja & Festival Service',
+    category: 'Other',
+    description: 'Special pooja, kumbhabhishekam, and annual festival vocal and instrumental music.',
+  },
+  {
+    name: 'Home Devotional Concert',
+    category: 'Other',
+    description: 'Auspicious occasions, family gatherings, and spiritual poojas at private residences.',
+  },
+] as const;
+

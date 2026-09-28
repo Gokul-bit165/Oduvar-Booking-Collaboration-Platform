@@ -4,6 +4,7 @@ import path from 'path';
 import { env } from './config/environment';
 import { authRouter } from './auth/auth.routes';
 import { oduvarProfileRouter, oduvarPublicRouter } from './oduvar-profile/profile.routes';
+import { oduvarServiceRouter, oduvarServicePublicRouter } from './oduvar-service/service.routes';
 import { referenceRouter } from './reference/reference.routes';
 import { errorHandler } from './common/middleware/error.middleware';
 import { ApiResponse } from './common/dto/api-response';
@@ -34,7 +35,7 @@ export function createApp(): Application {
       status: 'OK',
       timestamp: new Date().toISOString(),
       service: 'Online Oduvar Booking & Collaboration Platform API',
-      version: '2.0.0-phase2',
+      version: '3.0.0-phase3',
     });
   });
 
@@ -42,6 +43,8 @@ export function createApp(): Application {
   app.use('/api/auth', authRouter);
   app.use('/api/oduvars', oduvarProfileRouter);
   app.use('/api/oduvars', oduvarPublicRouter);
+  app.use('/api/oduvars', oduvarServiceRouter);
+  app.use('/api/oduvars', oduvarServicePublicRouter);
   app.use('/api', referenceRouter);
 
   // 404 handler

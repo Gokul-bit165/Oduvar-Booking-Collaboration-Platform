@@ -71,6 +71,7 @@ model OduvarProfile {
   skills       OduvarProfileSkill[]
   instruments  OduvarProfileInstrument[]
   availabilities Availability[]
+  services     OduvarService[]
 
   @@map("oduvar_profiles")
 }
@@ -136,7 +137,60 @@ model OduvarProfileInstrument {
 }
 
 // =============================================================================
-// Future Entities (Phases 3–10 stubs)
+// Phase 3: Services & Pricing
+// =============================================================================
+
+model Service {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String          @unique
+  description String?
+  category    String          // 'Thevaram', 'Thiruvasagam', 'Thirupugazh', 'Other'
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  oduvarServices OduvarService[]
+
+  @@map("services")
+}
+
+model OduvarService {
+  id                String           @id @default(uuid()) @db.Uuid
+  profileId         String           @map("profile_id") @db.Uuid
+  serviceId         String           @map("service_id") @db.Uuid
+  customDescription String?          @map("custom_description")
+  transport         TransportOption  @default(TO_BE_DISCUSSED)
+  transportFee      Decimal?         @map("transport_fee") @db.Decimal(10, 2)
+  isActive          Boolean          @default(true) @map("is_active")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  profile           OduvarProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  service           Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  pricings          ServicePricing[]
+
+  @@unique([profileId, serviceId])
+  @@map("oduvar_services")
+}
+
+model ServicePricing {
+  id              String        @id @default(uuid()) @db.Uuid
+  oduvarServiceId String        @map("oduvar_service_id") @db.Uuid
+  durationMinutes Int           @map("duration_minutes")
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("INR")
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  oduvarService   OduvarService @relation(fields: [oduvarServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([oduvarServiceId, durationMinutes])
+  @@map("service_pricings")
+}
+
+// =============================================================================
+// Future Entities (Phases 4–10 stubs)
 // =============================================================================
 
 model Availability {
@@ -156,22 +210,30 @@ model Availability {
 }
 
 model Booking {
-  id          String   @id @default(uuid()) @db.Uuid
-  clientId    String   @map("client_id") @db.Uuid
-  oduvarId    String   @map("oduvar_id") @db.Uuid
-  date        DateTime @db.Date
-  startTime   String   @map("start_time")
-  duration    Int
-  songType    String   @map("song_type")
-  eventType   String   @map("event_type")
-  description String
-  location    String
-  phone1      String
-  phone2      String?
-  transport   String
-  status      String   @default("PENDING")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid()) @db.Uuid
+  clientId              String   @map("client_id") @db.Uuid
+  oduvarId              String   @map("oduvar_id") @db.Uuid
+  serviceId             String?  @map("service_id") @db.Uuid
+  pricingId             String?  @map("pricing_id") @db.Uuid
+  serviceNameSnapshot   String?  @map("service_name_snapshot")
+  durationSnapshot      Int?     @map("duration_snapshot")
+  serviceAmountSnapshot Decimal? @map("service_amount_snapshot") @db.Decimal(10, 2)
+  transportSnapshot     String?  @map("transport_snapshot")
+  transportFeeSnapshot  Decimal? @map("transport_fee_snapshot") @db.Decimal(10, 2)
+  currencySnapshot      String?  @default("INR") @map("currency_snapshot")
+  date                  DateTime @db.Date
+  startTime             String   @map("start_time")
+  duration              Int
+  songType              String   @map("song_type")
+  eventType             String   @map("event_type")
+  description           String
+  location              String
+  phone1                String
+  phone2                String?
+  transport             String
+  status                String   @default("PENDING")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   client      User     @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
   oduvar      User     @relation("OduvarBookings", fields: [oduvarId], references: [id], onDelete: Cascade)

@@ -1,6 +1,6 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { PREDEFINED_SKILLS, PREDEFINED_INSTRUMENTS } from '../src/common/constants/reference-data';
+import { PREDEFINED_SKILLS, PREDEFINED_INSTRUMENTS, PREDEFINED_SERVICES } from '../src/common/constants/reference-data';
 
 const prisma = new PrismaClient();
 
@@ -73,6 +73,17 @@ async function main() {
     });
   }
   console.log(`    ✓ ${PREDEFINED_INSTRUMENTS.length} instruments seeded`);
+
+  // ─── Phase 3: Services ──────────────────────────────────────────────────────
+  console.log('  → Seeding services...');
+  for (const s of PREDEFINED_SERVICES) {
+    await prisma.service.upsert({
+      where: { name: s.name },
+      update: { category: s.category, description: s.description, isActive: true },
+      create: { name: s.name, category: s.category, description: s.description, isActive: true },
+    });
+  }
+  console.log(`    ✓ ${PREDEFINED_SERVICES.length} services seeded`);
 
   console.log('✅ Seeding completed successfully.');
 }

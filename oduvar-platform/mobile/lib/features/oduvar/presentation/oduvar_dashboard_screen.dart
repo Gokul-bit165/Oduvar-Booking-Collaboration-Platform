@@ -5,6 +5,8 @@ import '../presentation/oduvar_profile_state.dart';
 import '../presentation/edit_oduvar_profile_screen.dart';
 import '../presentation/oduvar_profile_view_screen.dart';
 import '../models/oduvar_profile_model.dart';
+import '../../services/presentation/oduvar_service_state.dart';
+import '../../services/presentation/my_services_screen.dart';
 import 'widgets/profile_widgets.dart';
 
 class OduvarDashboardScreen extends StatefulWidget {
@@ -344,7 +346,27 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
           subtitle: 'Add or manage up to 5 gallery photos',
           onTap: _openEditProfile,
         ),
+        const SizedBox(height: 8),
+        _quickActionTile(
+          icon: Icons.receipt_long_outlined,
+          title: 'My Services & Pricing',
+          subtitle: 'Define devotional services, durations and honorarium',
+          onTap: _openMyServices,
+        ),
       ],
+    );
+  }
+
+  Future<void> _openMyServices() async {
+    final serviceState = OduvarServiceState();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MyServicesScreen(
+          serviceState: serviceState,
+          authState: widget.authState,
+        ),
+      ),
     );
   }
 

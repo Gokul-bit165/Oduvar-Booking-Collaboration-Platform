@@ -42,3 +42,18 @@ referenceRouter.get('/performance-types', (_req: Request, res: Response) => {
 referenceRouter.get('/song-categories', (_req: Request, res: Response) => {
   ApiResponse.success(res, { songCategories: SONG_CATEGORIES });
 });
+
+// GET /api/services
+referenceRouter.get('/services', async (_req: Request, res: Response) => {
+  try {
+    const services = await prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, name: true, category: true, description: true, isActive: true },
+    });
+    ApiResponse.success(res, { services });
+  } catch (e: any) {
+    ApiResponse.error(res, 'FETCH_ERROR', 'Failed to fetch services', 500);
+  }
+});
+

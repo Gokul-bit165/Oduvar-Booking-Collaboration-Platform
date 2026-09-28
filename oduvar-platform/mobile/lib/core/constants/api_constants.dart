@@ -33,6 +33,15 @@ class ApiConstants {
   static const String protectedOduvar = '/auth/protected/oduvar';
   static const String protectedAdmin = '/auth/protected/admin';
 
+  // Services endpoints (Phase 3)
+  static const String myServices = '/oduvars/me/services';
+  static const String services = '/services';
+  static String publicOduvarServices(String oduvarId) => '/oduvars/$oduvarId/services';
+  static String oduvarService(String serviceId) => '/oduvars/me/services/$serviceId';
+  static String servicePricing(String serviceId) => '/oduvars/me/services/$serviceId/pricing';
+  static String servicePricingItem(String serviceId, String pricingId) =>
+      '/oduvars/me/services/$serviceId/pricing/$pricingId';
+
   // Request timeouts
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
