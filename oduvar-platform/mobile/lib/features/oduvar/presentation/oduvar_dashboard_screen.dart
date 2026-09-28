@@ -7,6 +7,14 @@ import '../presentation/oduvar_profile_view_screen.dart';
 import '../models/oduvar_profile_model.dart';
 import '../../services/presentation/oduvar_service_state.dart';
 import '../../services/presentation/my_services_screen.dart';
+import '../../bookings/data/booking_repository.dart';
+import '../../bookings/models/booking_model.dart';
+import '../../bookings/presentation/booking_details_screen.dart';
+import '../../bookings/presentation/booking_state.dart';
+import '../../bookings/presentation/client_bookings_screen.dart' show todayKey;
+import '../../bookings/presentation/oduvar_booking_requests_screen.dart';
+import '../../bookings/widgets/booking_card.dart';
+import '../../notifications/notification_feature.dart';
 import '../../availability/presentation/availability_state.dart';
 import '../../availability/presentation/availability_settings_screen.dart';
 import 'widgets/profile_widgets.dart';
@@ -14,7 +22,10 @@ import 'widgets/profile_widgets.dart';
 class OduvarDashboardScreen extends StatefulWidget {
   final AuthState authState;
 
-  const OduvarDashboardScreen({super.key, required this.authState});
+  final BookingRepository? bookingRepository;
+  final NotificationRepository? notificationRepository;
+
+  const OduvarDashboardScreen({super.key, required this.authState, this.bookingRepository, this.notificationRepository});
 
   @override
   State<OduvarDashboardScreen> createState() => _OduvarDashboardScreenState();
@@ -22,12 +33,15 @@ class OduvarDashboardScreen extends StatefulWidget {
 
 class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
   late final OduvarProfileState _profileState;
+  late final BookingState _bookings;
 
   @override
   void initState() {
     super.initState();
     _profileState = OduvarProfileState();
+    _bookings = BookingState(repository: widget.bookingRepository);
     _loadProfile();
+    _loadBookings();
   }
 
   Future<void> _loadProfile() async {
@@ -40,6 +54,7 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
   @override
   void dispose() {
     _profileState.dispose();
+    _bookings.dispose();
     super.dispose();
   }
 
@@ -55,6 +70,26 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
     );
     // Refresh after returning from edit
     await _loadProfile();
+  }
+
+  Future<void> _loadBookings() async {
+    final token = await widget.authState.getAccessToken();
+    if (token != null) await _bookings.loadForOduvar(token);
+  }
+
+  Future<void> _openRequests() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OduvarBookingRequestsScreen(authState: widget.authState, state: _bookings),
+      ),
+    );
+    _loadBookings();
+  }
+
+  Future<void> _act(Future<BookingModel?> Function(String token) op) async {
+    final token = await widget.authState.getAccessToken();
+    if (token != null) await op(token);
   }
 
   Future<void> _logout() async {
@@ -76,6 +111,7 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
             title: const Text('Oduvar Portal'),
             backgroundColor: AppTheme.sacredSurface,
             actions: [
+              NotificationBell(authState: widget.authState, repository: widget.notificationRepository),
               IconButton(
                 icon: const Icon(Icons.logout, size: 22),
                 onPressed: _logout,
@@ -84,13 +120,19 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
             ],
           ),
           body: RefreshIndicator(
-            onRefresh: _loadProfile,
+            onRefresh: () async {
+              await Future.wait([_loadProfile(), _loadBookings()]);
+            },
             color: AppTheme.primaryMaroon,
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
                 // ── Welcome Header ──────────────────────────────────────────
                 _buildWelcomeCard(user?.name ?? 'Oduvar'),
+                const SizedBox(height: 20),
+
+                // ── Bookings ────────────────────────────────────────────────
+                ListenableBuilder(listenable: _bookings, builder: (context, _) => _buildBookingsSection()),
                 const SizedBox(height: 20),
 
                 // ── Profile Completion / Setup ──────────────────────────────
@@ -109,6 +151,76 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBookingsSection() {
+    final today = todayKey();
+    final pending = _bookings.pending;
+    final todays = _bookings.todays(today);
+    final upcoming = _bookings.upcomingConfirmed(today);
+    Widget stat(Key key, String label, int n, {bool highlight = false}) => Expanded(
+          child: Container(
+            key: key,
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: highlight && n > 0 ? AppTheme.warningOrange.withAlpha(24) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: highlight && n > 0 ? AppTheme.warningOrange : AppTheme.sacredBorder),
+            ),
+            child: Column(children: [
+              Text('$n', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.primaryMaroon)),
+              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: Color(0xFF6B5E55))),
+            ]),
+          ),
+        );
+
+    return Column(
+      key: const Key('oduvar_bookings_section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          const Expanded(
+            child: Text('BOOKINGS',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.sacredSaffron, letterSpacing: 1.2)),
+          ),
+          TextButton(key: const Key('all_requests_button'), onPressed: _openRequests, child: const Text('View all')),
+        ]),
+        if (_bookings.status == BookingListStatus.error)
+          Row(children: [
+            Expanded(
+              child: Text(_bookings.errorMessage ?? 'Could not load bookings',
+                  key: const Key('dash_bookings_error'), style: const TextStyle(fontSize: 12, color: AppTheme.errorRed)),
+            ),
+            TextButton(key: const Key('dash_bookings_retry'), onPressed: _loadBookings, child: const Text('Retry')),
+          ])
+        else ...[
+          Row(children: [
+            stat(const Key('stat_pending'), 'Pending Requests', pending.length, highlight: true),
+            stat(const Key('stat_today'), 'Today Bookings', todays.length),
+            stat(const Key('stat_upcoming'), 'Upcoming Confirmed', upcoming.length),
+          ]),
+          const SizedBox(height: 12),
+          for (final b in pending.take(3))
+            BookingCard(
+              booking: b,
+              showClient: true,
+              busy: _bookings.busyId == b.id,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BookingDetailsScreen(
+                    bookingId: b.id, initial: b, viewer: BookingViewer.oduvar, authState: widget.authState, state: _bookings),
+                ),
+              ),
+              onAccept: () => _act((t) => _bookings.accept(t, b.id)),
+              onReject: () => _act((t) => _bookings.reject(t, b.id)),
+            ),
+          if (_bookings.errorMessage != null && _bookings.errorKind != BookingErrorKind.none)
+            Text(_bookings.errorMessage!, key: const Key('dash_action_error'), style: const TextStyle(fontSize: 12, color: AppTheme.errorRed)),
+        ],
+      ],
     );
   }
 
@@ -407,11 +519,6 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        _placeholderTile(
-            icon: Icons.calendar_month_outlined,
-            title: 'Booking Requests',
-            subtitle: 'View and manage booking requests'),
-        const SizedBox(height: 8),
         _placeholderTile(
             icon: Icons.chat_bubble_outline,
             title: 'Messages',

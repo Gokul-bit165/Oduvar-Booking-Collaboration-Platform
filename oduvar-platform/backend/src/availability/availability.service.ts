@@ -30,6 +30,13 @@ export function setOccupiedIntervalProvider(p: OccupiedIntervalProvider) {
   occupiedProvider = p;
 }
 
+/** Same data for many Oduvars at once (used by discovery's availability filter to avoid one query per profile). */
+export type OccupiedBatchProvider = (profileIds: string[], date: string) => Promise<Map<string, Interval[]>>;
+let occupiedBatchProvider: OccupiedBatchProvider | null = null;
+export function setOccupiedBatchProvider(p: OccupiedBatchProvider | null) {
+  occupiedBatchProvider = p;
+}
+
 /** Day of week for a calendar date. The date is timezone-independent (a calendar date), so UTC math is safe. */
 export function dayOfWeekFor(date: string): DayOfWeek {
   const d = new Date(`${date}T00:00:00Z`).getUTCDay(); // 0 = Sunday
@@ -256,9 +263,11 @@ export class AvailabilityService {
     date: string,
     duration: number,
     now: { date: string; minutes: number },
-    extraOccupied: Interval[] = []
+    extraOccupied: Interval[] = [],
+    preloadedOccupied?: Interval[]
   ): Promise<number[]> {
-    const occupied = [...(await occupiedProvider(profile.id, date)), ...extraOccupied];
+    const base = preloadedOccupied ?? (await occupiedProvider(profile.id, date));
+    const occupied = [...base, ...extraOccupied];
     return getAvailableSlots({
       windows,
       durationMinutes: duration,
@@ -377,6 +386,9 @@ export class AvailabilityService {
     const overrideBy = new Map<string, typeof overrideRows>();
     for (const r of overrideRows) overrideBy.set(r.oduvarId, [...(overrideBy.get(r.oduvarId) ?? []), r]);
 
+    // One query for everyone's confirmed bookings when a batch provider is registered.
+    const occupiedBy = occupiedBatchProvider ? await occupiedBatchProvider(ids, date) : null;
+
     for (const profile of profiles) {
       const nowZ = nowInZone(profile.timezone, now);
       if (date < nowZ.date) continue;
@@ -384,7 +396,7 @@ export class AvailabilityService {
       if (duration < profile.minimumDurationMinutes || duration > profile.maximumDurationMinutes) continue;
       const windows = this.windowsForDate(date, weeklyBy.get(profile.id) ?? [], overrideBy.get(profile.id) ?? []);
       if (windows.length === 0) continue;
-      const slots = await this.slotStarts(profile, windows, date, duration, nowZ);
+      const slots = await this.slotStarts(profile, windows, date, duration, nowZ, [], occupiedBy ? occupiedBy.get(profile.id) ?? [] : undefined);
       if (slots.length > 0) result.add(profile.id);
     }
     return result;
@@ -399,7 +411,8 @@ export class AvailabilityService {
     date: string,
     durationMinutes?: number,
     extraOccupied: Interval[] = [],
-    now: Date = new Date()
+    now: Date = new Date(),
+    opts: { ignoreBookings?: boolean } = {}
   ): Promise<string[]> {
     const profile = await prisma.oduvarProfile.findUnique({ where: { id: profileId } });
     if (!profile) throw new AppError('NOT_FOUND', 'Oduvar profile not found', 404);
@@ -408,7 +421,9 @@ export class AvailabilityService {
     const nowZ = nowInZone(profile.timezone, now);
     if (date < nowZ.date) return [];
     const windows = this.windowsForDate(date, weekly, overrides);
-    return (await this.slotStarts(profile, windows, date, duration, nowZ, extraOccupied)).map(formatTime);
+    // `ignoreBookings` lets callers tell "outside working hours" apart from "taken by a confirmed booking".
+    const preloaded = opts.ignoreBookings ? [] : undefined;
+    return (await this.slotStarts(profile, windows, date, duration, nowZ, extraOccupied, preloaded)).map(formatTime);
   }
 }
 

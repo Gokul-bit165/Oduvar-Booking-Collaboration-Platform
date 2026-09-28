@@ -9,6 +9,11 @@ import '../../discovery/presentation/discovery_state.dart';
 import '../../discovery/presentation/oduvar_discovery_screen.dart';
 import '../../discovery/presentation/widgets/discovery_states.dart';
 import '../../discovery/presentation/widgets/oduvar_card.dart';
+import '../../bookings/data/booking_repository.dart';
+import '../../bookings/presentation/booking_state.dart';
+import '../../bookings/presentation/client_bookings_screen.dart';
+import '../../bookings/widgets/booking_card.dart';
+import '../../notifications/notification_feature.dart';
 import '../../oduvar/data/oduvar_profile_repository.dart';
 import '../../services/data/oduvar_service_repository.dart';
 
@@ -20,6 +25,8 @@ class ClientHomeScreen extends StatefulWidget {
   final OduvarProfileRepository? profileRepository;
   final OduvarServiceRepository? serviceRepository;
   final AvailabilityRepository? availabilityRepository;
+  final BookingRepository? bookingRepository;
+  final NotificationRepository? notificationRepository;
 
   const ClientHomeScreen({
     super.key,
@@ -28,6 +35,8 @@ class ClientHomeScreen extends StatefulWidget {
     this.profileRepository,
     this.serviceRepository,
     this.availabilityRepository,
+    this.bookingRepository,
+    this.notificationRepository,
   });
 
   @override
@@ -40,6 +49,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
   /// Small unfiltered preview list for the home page.
   late final DiscoveryState _preview;
+  late final BookingState _bookings;
   final TextEditingController _search = TextEditingController();
 
   @override
@@ -47,9 +57,11 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
     super.initState();
     _discovery = DiscoveryState(repository: widget.discoveryRepository);
     _preview = DiscoveryState(repository: widget.discoveryRepository, pageSize: 5);
+    _bookings = BookingState(repository: widget.bookingRepository);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _discovery.loadOptions();
       _preview.ensureLoaded();
+      _loadBookings();
     });
   }
 
@@ -58,7 +70,24 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
     _search.dispose();
     _discovery.dispose();
     _preview.dispose();
+    _bookings.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBookings() async {
+    final token = await widget.authState.getAccessToken();
+    if (token != null) await _bookings.loadForClient(token);
+  }
+
+  Future<void> _openBookings([ClientBookingTab tab = ClientBookingTab.upcoming]) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ClientBookingsScreen(
+        authState: widget.authState,
+        state: _bookings,
+        initialTab: tab,
+      ),
+    ));
+    _loadBookings();
   }
 
   Future<void> _openDiscovery() async {
@@ -68,6 +97,8 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         profileRepository: widget.profileRepository,
         serviceRepository: widget.serviceRepository,
         availabilityRepository: widget.availabilityRepository,
+        authState: widget.authState,
+        bookingRepository: widget.bookingRepository,
       ),
     ));
   }
@@ -91,6 +122,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
       appBar: AppBar(
         title: const Text('Devotee Sanctuary'),
         actions: [
+          NotificationBell(authState: widget.authState, repository: widget.notificationRepository),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             tooltip: 'Log Out',
@@ -102,7 +134,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
         child: RefreshIndicator(
           color: AppTheme.primaryMaroon,
           onRefresh: () async {
-            await Future.wait([_preview.refresh(), _discovery.loadOptions(force: true)]);
+            await Future.wait([_preview.refresh(), _discovery.loadOptions(force: true), _loadBookings()]);
           },
           child: ListView(
             key: const Key('client_home_list'),
@@ -110,6 +142,8 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               _header(user?.name),
+              const SizedBox(height: 22),
+              ListenableBuilder(listenable: _bookings, builder: (context, _) => _bookingsSection()),
               const SizedBox(height: 22),
               const Text('Find an Oduvar',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.primaryMaroonDark)),
@@ -182,6 +216,77 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _bookingsSection() {
+    final today = todayKey();
+    final counts = {
+      ClientBookingTab.upcoming: _bookings.upcoming(today).length,
+      ClientBookingTab.pending: _bookings.pending.length,
+      ClientBookingTab.completed: _bookings.completed.length,
+      ClientBookingTab.cancelled: _bookings.cancelled.length,
+    };
+    const labels = {
+      ClientBookingTab.upcoming: 'Upcoming',
+      ClientBookingTab.pending: 'Pending',
+      ClientBookingTab.completed: 'Completed',
+      ClientBookingTab.cancelled: 'Cancelled',
+    };
+    final upcomingList = _bookings.upcoming(today);
+    final next = upcomingList.isNotEmpty ? upcomingList.first : (_bookings.pending.isNotEmpty ? _bookings.pending.first : null);
+    return Column(
+      key: const Key('home_bookings_section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          const Expanded(
+            child: Text('My Bookings',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryMaroonDark)),
+          ),
+          TextButton(key: const Key('my_bookings_button'), onPressed: _openBookings, child: const Text('View all')),
+        ]),
+        const SizedBox(height: 6),
+        if (_bookings.status == BookingListStatus.error)
+          Row(children: [
+            Expanded(
+              child: Text(_bookings.errorMessage ?? 'Could not load bookings',
+                  key: const Key('home_bookings_error'), style: const TextStyle(fontSize: 12, color: AppTheme.errorRed)),
+            ),
+            TextButton(key: const Key('home_bookings_retry'), onPressed: _loadBookings, child: const Text('Retry')),
+          ])
+        else ...[
+          Row(children: [
+            for (final t in ClientBookingTab.values)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    key: Key('home_count_${t.name}'),
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _openBookings(t),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.sacredBorder),
+                      ),
+                      child: Column(children: [
+                        Text('${counts[t]}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primaryMaroon)),
+                        Text(labels[t]!, style: const TextStyle(fontSize: 11, color: Color(0xFF6B5E55))),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+          if (next != null) ...[
+            const SizedBox(height: 12),
+            BookingCard(booking: next, onTap: _openBookings),
+          ],
+        ],
+      ],
     );
   }
 

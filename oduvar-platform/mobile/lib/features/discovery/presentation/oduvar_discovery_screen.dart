@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:oduvar_mobile/core/theme/app_theme.dart';
+import 'package:oduvar_mobile/features/auth/presentation/auth_state.dart';
 import 'package:oduvar_mobile/features/availability/data/availability_repository.dart';
+import 'package:oduvar_mobile/features/bookings/data/booking_repository.dart';
 import 'package:oduvar_mobile/features/oduvar/data/oduvar_profile_repository.dart';
 import 'package:oduvar_mobile/features/services/data/oduvar_service_repository.dart';
 import '../models/discovery_model.dart';
@@ -17,6 +19,8 @@ void openOduvarProfile(
   OduvarProfileRepository? profileRepository,
   OduvarServiceRepository? serviceRepository,
   AvailabilityRepository? availabilityRepository,
+  AuthState? authState,
+  BookingRepository? bookingRepository,
 }) {
   Navigator.of(context).push(MaterialPageRoute(
     builder: (_) => OduvarPublicProfileScreen(
@@ -25,6 +29,8 @@ void openOduvarProfile(
       profileRepository: profileRepository,
       serviceRepository: serviceRepository,
       availabilityRepository: availabilityRepository,
+      authState: authState,
+      bookingRepository: bookingRepository,
     ),
   ));
 }
@@ -36,6 +42,8 @@ class OduvarDiscoveryScreen extends StatefulWidget {
   final OduvarProfileRepository? profileRepository;
   final OduvarServiceRepository? serviceRepository;
   final AvailabilityRepository? availabilityRepository;
+  final AuthState? authState;
+  final BookingRepository? bookingRepository;
 
   const OduvarDiscoveryScreen({
     super.key,
@@ -43,6 +51,8 @@ class OduvarDiscoveryScreen extends StatefulWidget {
     this.profileRepository,
     this.serviceRepository,
     this.availabilityRepository,
+    this.authState,
+    this.bookingRepository,
   });
 
   @override
@@ -219,6 +229,8 @@ class _OduvarDiscoveryScreenState extends State<OduvarDiscoveryScreen> {
                 profileRepository: widget.profileRepository,
                 serviceRepository: widget.serviceRepository,
                 availabilityRepository: widget.availabilityRepository,
+                authState: widget.authState,
+                bookingRepository: widget.bookingRepository,
               ),
             ),
           if (s.isLoadingMore)

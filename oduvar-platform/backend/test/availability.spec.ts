@@ -290,7 +290,12 @@ describe('Phase 4: Availability API', () => {
     expect(ok.body.data.rules.timezone).toBe('Asia/Kolkata');
   });
 
-  test('no booking endpoints exist in this phase', async () => {
-    expect((await request(app).post('/api/bookings').set(auth(clientTok)).send({})).status).toBe(404);
+  // Phase 4 originally asserted POST /api/bookings was a 404 (bookings did not exist yet). Phase 6
+  // implements bookings, so the invariant that still matters here is that availability endpoints stay
+  // read-only for the public and that creating a booking is never possible anonymously or as an Oduvar.
+  test('availability stays read-only for the public; bookings cannot be created anonymously or by an Oduvar', async () => {
+    expect((await request(app).post('/api/bookings').send({})).status).toBe(401);
+    expect((await request(app).post('/api/bookings').set(auth(tok)).send({})).status).toBe(403);
+    expect((await request(app).post(`/api/oduvars/${userId}/availability`).send({})).status).toBe(404);
   });
 });

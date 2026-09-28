@@ -26,6 +26,14 @@ enum DayOfWeek {
   SUNDAY
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
 enum OverrideType {
   UNAVAILABLE
   AVAILABLE
@@ -276,36 +284,67 @@ model Availability {
   @@map("availabilities")
 }
 
+// Phase 6: bookings.
+// Column naming note: `serviceId` = catalogue Service id, `pricingId` = ServicePricing id,
+// `oduvarServiceId` = the Oduvar's OduvarService id, `duration` = duration in minutes,
+// `location` = the CLIENT's event location (never the Oduvar's profile location),
+// `transport` = the transport option the client acknowledged (the Oduvar's option at booking time).
+// There are deliberately NO foreign keys to services/pricing: bookings are historical records that
+// must survive an Oduvar editing or deleting a service, so everything needed is snapshotted below.
+// Money is Decimal(10,2), same as Phase 3.
 model Booking {
-  id                    String   @id @default(uuid()) @db.Uuid
-  clientId              String   @map("client_id") @db.Uuid
-  oduvarId              String   @map("oduvar_id") @db.Uuid
-  serviceId             String?  @map("service_id") @db.Uuid
-  pricingId             String?  @map("pricing_id") @db.Uuid
-  serviceNameSnapshot   String?  @map("service_name_snapshot")
-  durationSnapshot      Int?     @map("duration_snapshot")
-  serviceAmountSnapshot Decimal? @map("service_amount_snapshot") @db.Decimal(10, 2)
-  transportSnapshot     String?  @map("transport_snapshot")
-  transportFeeSnapshot  Decimal? @map("transport_fee_snapshot") @db.Decimal(10, 2)
-  currencySnapshot      String?  @default("INR") @map("currency_snapshot")
-  date                  DateTime @db.Date
-  startTime             String   @map("start_time")
+  id                    String        @id @default(uuid()) @db.Uuid
+  clientId              String        @map("client_id") @db.Uuid
+  oduvarId              String        @map("oduvar_id") @db.Uuid // Oduvar USER id
+  serviceId             String?       @map("service_id") @db.Uuid
+  pricingId             String?       @map("pricing_id") @db.Uuid
+  oduvarServiceId       String?       @map("oduvar_service_id") @db.Uuid
+
+  // ── Price snapshot (what was quoted at request time; never re-read from current pricing) ──
+  serviceNameSnapshot   String?       @map("service_name_snapshot")
+  durationSnapshot      Int?          @map("duration_snapshot")
+  serviceAmountSnapshot Decimal?      @map("service_amount_snapshot") @db.Decimal(10, 2)
+  transportSnapshot     String?       @map("transport_snapshot")
+  transportFeeSnapshot  Decimal?      @map("transport_fee_snapshot") @db.Decimal(10, 2)
+  totalAmountSnapshot   Decimal?      @map("total_amount_snapshot") @db.Decimal(10, 2) // null = "To Be Discussed"
+  currencySnapshot      String?       @default("INR") @map("currency_snapshot")
+  serviceAmount         Decimal?      @map("service_amount") @db.Decimal(10, 2)
+  transportFee          Decimal?      @map("transport_fee") @db.Decimal(10, 2)
+  totalAmount           Decimal?      @map("total_amount") @db.Decimal(10, 2)
+  currency              String        @default("INR")
+
+  // ── When: wall-clock date/time in the Oduvar's timezone (snapshotted) + derived UTC instants ──
+  date                  DateTime      @db.Date
+  startTime             String        @map("start_time")
+  endTime               String?       @map("end_time")
   duration              Int
-  songType              String   @map("song_type")
-  eventType             String   @map("event_type")
+  timezone              String        @default("Asia/Kolkata")
+  startsAt              DateTime?     @map("starts_at")
+  endsAt                DateTime?     @map("ends_at")
+  blocksUntil           DateTime?     @map("blocks_until") // endsAt + buffer; used by the no-overlap DB constraint
+
+  songType              String        @map("song_type")
+  eventType             String        @map("event_type")
   description           String
   location              String
   phone1                String
   phone2                String?
   transport             String
-  status                String   @default("PENDING")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  status                BookingStatus @default(PENDING)
+  statusReason          String?       @map("status_reason") @db.VarChar(500)
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  confirmedAt           DateTime?     @map("confirmed_at")
+  rejectedAt            DateTime?     @map("rejected_at")
+  cancelledAt           DateTime?     @map("cancelled_at")
+  completedAt           DateTime?     @map("completed_at")
 
   client      User     @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
   oduvar      User     @relation("OduvarBookings", fields: [oduvarId], references: [id], onDelete: Cascade)
   reviews     Review[]
 
+  @@index([oduvarId, date, status])
+  @@index([clientId, createdAt])
   @@map("bookings")
 }
 
@@ -382,9 +421,12 @@ model Notification {
   title     String
   body      String
   readAt    DateTime? @map("read_at")
+  data      Json?     // e.g. { bookingId } so the app can deep-link
   createdAt DateTime  @default(now()) @map("created_at")
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 
   @@map("notifications")
 }

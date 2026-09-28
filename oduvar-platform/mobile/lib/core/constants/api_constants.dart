@@ -55,6 +55,17 @@ class ApiConstants {
   static const String instruments = '/instruments';
   static const String performanceTypes = '/performance-types';
 
+  // Booking endpoints (Phase 6)
+  static const String bookings = '/bookings';
+  static String booking(String id) => '/bookings/$id';
+  static String cancelBooking(String id) => '/bookings/$id/cancel';
+  static const String myOduvarBookings = '/oduvars/me/bookings';
+  static String oduvarBooking(String id) => '/oduvars/me/bookings/$id';
+  static String oduvarBookingAction(String id, String action) => '/oduvars/me/bookings/$id/$action';
+  static const String notifications = '/notifications';
+  static String notificationRead(String id) => '/notifications/$id/read';
+  static const String notificationsReadAll = '/notifications/read-all';
+
   // Request timeouts
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:oduvar_mobile/core/network/api_exceptions.dart';
 import 'package:oduvar_mobile/core/theme/app_theme.dart';
+import 'package:oduvar_mobile/features/auth/presentation/auth_state.dart';
 import 'package:oduvar_mobile/features/availability/data/availability_repository.dart';
+import 'package:oduvar_mobile/features/bookings/data/booking_repository.dart';
 import 'package:oduvar_mobile/features/oduvar/data/oduvar_profile_repository.dart';
 import 'package:oduvar_mobile/features/oduvar/models/oduvar_profile_model.dart';
 import 'package:oduvar_mobile/features/oduvar/presentation/oduvar_profile_view_screen.dart';
@@ -17,6 +19,8 @@ class OduvarPublicProfileScreen extends StatefulWidget {
   final OduvarProfileRepository? profileRepository;
   final OduvarServiceRepository? serviceRepository;
   final AvailabilityRepository? availabilityRepository;
+  final AuthState? authState;
+  final BookingRepository? bookingRepository;
 
   const OduvarPublicProfileScreen({
     super.key,
@@ -25,6 +29,8 @@ class OduvarPublicProfileScreen extends StatefulWidget {
     this.profileRepository,
     this.serviceRepository,
     this.availabilityRepository,
+    this.authState,
+    this.bookingRepository,
   });
 
   @override
@@ -81,6 +87,8 @@ class _OduvarPublicProfileScreenState extends State<OduvarPublicProfileScreen> {
         services: _serviceList,
         oduvarUserId: widget.oduvarId,
         availabilityRepository: widget.availabilityRepository,
+        authState: widget.authState,
+        bookingRepository: widget.bookingRepository,
       );
     }
     return Scaffold(

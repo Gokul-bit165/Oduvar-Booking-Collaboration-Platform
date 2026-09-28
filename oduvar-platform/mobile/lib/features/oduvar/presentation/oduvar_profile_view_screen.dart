@@ -3,7 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:oduvar_mobile/core/theme/app_theme.dart';
 import 'package:oduvar_mobile/features/services/models/service_model.dart';
 import 'package:oduvar_mobile/features/services/presentation/widgets/public_services_section.dart';
+import 'package:oduvar_mobile/features/auth/presentation/auth_state.dart';
 import 'package:oduvar_mobile/features/availability/data/availability_repository.dart';
+import 'package:oduvar_mobile/features/bookings/data/booking_repository.dart';
+import 'package:oduvar_mobile/features/bookings/presentation/booking_flow_screen.dart';
 import 'package:oduvar_mobile/features/availability/presentation/availability_state.dart';
 import 'package:oduvar_mobile/features/availability/presentation/public_availability_screen.dart';
 import '../models/oduvar_profile_model.dart';
@@ -21,6 +24,10 @@ class OduvarProfileViewScreen extends StatelessWidget {
   /// Injectable for tests; defaults to the real API.
   final AvailabilityRepository? availabilityRepository;
 
+  /// Needed to start a booking (the signed-in client). Without it the booking button explains why it is unavailable.
+  final AuthState? authState;
+  final BookingRepository? bookingRepository;
+
   const OduvarProfileViewScreen({
     super.key,
     required this.profile,
@@ -28,12 +35,36 @@ class OduvarProfileViewScreen extends StatelessWidget {
     this.services,
     this.oduvarUserId,
     this.availabilityRepository,
+    this.authState,
+    this.bookingRepository,
   });
 
   static String _eventLabel(String key) => key
       .split('_')
       .map((w) => w.isEmpty ? w : w[0] + w.substring(1).toLowerCase())
       .join(' ');
+
+  void _startBooking(BuildContext context) {
+    if (authState == null || oduvarUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in as a client to request a booking.'), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BookingFlowScreen(
+          oduvarId: oduvarUserId!,
+          oduvarName: profile.owner.name,
+          services: services ?? const [],
+          authState: authState!,
+          bookingRepository: bookingRepository,
+          availabilityRepository: availabilityRepository,
+        ),
+      ),
+    );
+  }
 
   Widget _buildAvailabilityButton(BuildContext context) {
     return OutlinedButton.icon(
@@ -497,12 +528,7 @@ class OduvarProfileViewScreen extends StatelessWidget {
         const SizedBox(height: 12),
         ElevatedButton.icon(
           key: const Key('request_to_book_btn'),
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Booking — coming in Phase 3'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          ),
+          onPressed: () => _startBooking(context),
           icon: const Icon(Icons.calendar_month_outlined, size: 18),
           label: const Text('Request to Book'),
         ),
