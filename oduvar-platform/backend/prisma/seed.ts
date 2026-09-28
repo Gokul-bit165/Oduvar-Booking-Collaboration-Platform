@@ -1,12 +1,14 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { PREDEFINED_SKILLS, PREDEFINED_INSTRUMENTS } from '../src/common/constants/reference-data';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding development users...');
+  console.log('🌱 Seeding development data...');
 
-  // Development Seed Credentials (FAKE DEV ONLY)
+  // ─── Phase 1: Users ─────────────────────────────────────────────────────────
+  console.log('  → Seeding users...');
   const seedUsers = [
     {
       name: 'Sundar Devotee',
@@ -36,15 +38,9 @@ async function main() {
 
   for (const user of seedUsers) {
     const passwordHash = await bcrypt.hash(user.passwordPlain, 12);
-
     const upserted = await prisma.user.upsert({
       where: { email: user.email },
-      update: {
-        name: user.name,
-        phone: user.phone,
-        passwordHash,
-        role: user.role,
-      },
+      update: { name: user.name, phone: user.phone, passwordHash, role: user.role },
       create: {
         name: user.name,
         email: user.email,
@@ -54,16 +50,36 @@ async function main() {
         profilePhoto: user.profilePhoto,
       },
     });
-
-    console.log(` Created/Updated ${upserted.role}: ${upserted.email} (ID: ${upserted.id})`);
+    console.log(`    ✓ ${upserted.role}: ${upserted.email}`);
   }
 
-  console.log(' Seeding completed successfully.');
+  // ─── Phase 2: Reference data ────────────────────────────────────────────────
+  console.log('  → Seeding skills...');
+  for (const skill of PREDEFINED_SKILLS) {
+    await prisma.skill.upsert({
+      where: { slug: skill.slug },
+      update: { name: skill.name, sortOrder: skill.sortOrder },
+      create: { name: skill.name, slug: skill.slug, sortOrder: skill.sortOrder, isPredefined: true },
+    });
+  }
+  console.log(`    ✓ ${PREDEFINED_SKILLS.length} skills seeded`);
+
+  console.log('  → Seeding instruments...');
+  for (const inst of PREDEFINED_INSTRUMENTS) {
+    await prisma.instrument.upsert({
+      where: { slug: inst.slug },
+      update: { name: inst.name, sortOrder: inst.sortOrder },
+      create: { name: inst.name, slug: inst.slug, sortOrder: inst.sortOrder, isPredefined: true },
+    });
+  }
+  console.log(`    ✓ ${PREDEFINED_INSTRUMENTS.length} instruments seeded`);
+
+  console.log('✅ Seeding completed successfully.');
 }
 
 main()
   .catch((e) => {
-    console.error(' Seeding failed:', e);
+    console.error('❌ Seeding failed:', e);
     process.exit(1);
   })
   .finally(async () => {

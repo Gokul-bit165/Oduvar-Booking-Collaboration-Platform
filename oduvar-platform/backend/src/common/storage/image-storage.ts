@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 export interface StorageResult {
   url: string;
@@ -28,7 +28,7 @@ export class LocalImageStorage implements ImageStorage {
 
   async save(buffer: Buffer, originalName: string, mimetype: string): Promise<StorageResult> {
     const ext = path.extname(originalName) || this.extFromMime(mimetype);
-    const filename = `${uuidv4()}${ext}`;
+    const filename = `${crypto.randomUUID()}${ext}`;
     const filepath = path.join(this.uploadDir, filename);
     fs.writeFileSync(filepath, buffer);
     return {

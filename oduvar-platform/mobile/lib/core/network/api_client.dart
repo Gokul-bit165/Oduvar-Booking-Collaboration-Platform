@@ -91,6 +91,62 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> put(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? token,
+    Duration timeout = ApiConstants.receiveTimeout,
+  }) async {
+    final uri = Uri.parse('$_baseUrl$endpoint');
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    try {
+      final response = await _httpClient
+          .put(uri, headers: headers, body: body != null ? jsonEncode(body) : null)
+          .timeout(timeout);
+      return _handleResponse(response);
+    } on SocketException {
+      throw NetworkException(message: 'Cannot reach backend server.');
+    } on TimeoutException {
+      throw NetworkException(message: 'Request timed out.');
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException(message: 'Connection error: ${e.toString()}');
+    }
+  }
+
+  Future<dynamic> delete(
+    String endpoint, {
+    String? token,
+    Duration timeout = ApiConstants.receiveTimeout,
+  }) async {
+    final uri = Uri.parse('$_baseUrl$endpoint');
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    try {
+      final response = await _httpClient
+          .delete(uri, headers: headers)
+          .timeout(timeout);
+      return _handleResponse(response);
+    } on SocketException {
+      throw NetworkException(message: 'Cannot reach backend server.');
+    } on TimeoutException {
+      throw NetworkException(message: 'Request timed out.');
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw NetworkException(message: 'Connection error: ${e.toString()}');
+    }
+  }
+
   dynamic _handleResponse(http.Response response) {
     dynamic decoded;
     try {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TransportOption } from '@prisma/client';
-import { PERFORMANCE_TYPES, SONG_CATEGORIES } from '../../common/constants/reference-data';
+import { PERFORMANCE_TYPES, SONG_CATEGORIES } from '../common/constants/reference-data';
 
 const performanceTypeValues = PERFORMANCE_TYPES as unknown as [string, ...string[]];
 const songCategoryKeys = SONG_CATEGORIES.map((c) => c.key) as [string, ...string[]];
@@ -19,7 +19,7 @@ export const createOrUpdateProfileSchema = z.object({
     .max(10, 'Too many song categories')
     .optional()
     .default([]),
-  transport: z.enum(transportValues).optional().default('TO_BE_DISCUSSED'),
+  transport: z.nativeEnum(TransportOption).optional().default(TransportOption.TO_BE_DISCUSSED),
   collaborationEnabled: z.boolean().optional().default(true),
   isPublished: z.boolean().optional().default(false),
   skillIds: z.array(z.string().uuid('Invalid skill ID')).optional().default([]),

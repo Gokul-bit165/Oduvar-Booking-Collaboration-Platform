@@ -130,4 +130,9 @@ class AuthState extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  /// Returns stored access token – used by Phase 2 profile operations
+  Future<String?> getAccessToken() async {
+    return _authService.getAccessToken();
+  }
 }

@@ -68,7 +68,7 @@ export class ProfileController {
   // DELETE /api/oduvars/me/profile/photos/:photoId
   async deletePhoto(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await profileService.deletePhoto(req.user!.id, req.params.photoId);
+      const result = await profileService.deletePhoto(req.user!.id, req.params.photoId as string);
       ApiResponse.success(res, result);
     } catch (e) {
       next(e);
@@ -89,7 +89,7 @@ export class ProfileController {
   // GET /api/oduvars/:oduvarId/profile  (public)
   async getPublicProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const profile = await profileService.getPublicProfile(req.params.oduvarId);
+      const profile = await profileService.getPublicProfile(req.params.oduvarId as string);
       ApiResponse.success(res, { profile });
     } catch (e) {
       next(e);
