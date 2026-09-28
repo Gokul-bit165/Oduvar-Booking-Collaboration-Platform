@@ -85,6 +85,48 @@ async function main() {
   }
   console.log(`    ✓ ${PREDEFINED_SERVICES.length} services seeded`);
 
+  // ─── Phase 5: OPTIONAL demo Oduvars for local discovery testing ─────────────
+  // Off by default. Run with SEED_DEMO_ODUVARS=true. Refuses to run in production.
+  if (process.env.SEED_DEMO_ODUVARS === 'true' && process.env.NODE_ENV !== 'production') {
+    console.log('  → Seeding DEMO Oduvars (dev only)...');
+    const demo = [
+      { key: 'ravi', name: 'Ravi Shankar Oduvar', location: 'Salem', perf: ['VOCAL'], songs: ['THEVARAM'], transport: 'INCLUDED', instrument: 'harmonium', category: 'Thevaram' },
+      { key: 'meena', name: 'Meenakshi Devi', location: 'Chennai', perf: ['BOTH'], songs: ['THIRUVASAGAM', 'THIRUPUGAZH'], transport: 'ADDITIONAL_FEE', instrument: 'veena', category: 'Thiruvasagam' },
+      { key: 'karthik', name: 'Karthikeyan Pandaram', location: 'Madurai', perf: ['INSTRUMENTAL'], songs: ['THIRUPUGAZH'], transport: 'TO_BE_DISCUSSED', instrument: 'nadaswaram', category: 'Thirupugazh' },
+    ] as const;
+    for (const d of demo) {
+      const passwordHash = await bcrypt.hash('DemoOduvar#2026!', 12);
+      const user = await prisma.user.upsert({
+        where: { email: `demo.${d.key}@oduvar.local` },
+        update: {},
+        create: { name: d.name, email: `demo.${d.key}@oduvar.local`, phone: '+919000000000', passwordHash, role: Role.ODUVAR },
+      });
+      const profile = await prisma.oduvarProfile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id, location: d.location, bio: `Demo profile for ${d.name}.`,
+          performanceTypes: [...d.perf], songCategories: [...d.songs], transport: d.transport, isPublished: true,
+        },
+      });
+      const inst = await prisma.instrument.findUnique({ where: { slug: d.instrument } });
+      if (inst) {
+        await prisma.oduvarProfileInstrument.upsert({
+          where: { profileId_instrumentId: { profileId: profile.id, instrumentId: inst.id } },
+          update: {}, create: { profileId: profile.id, instrumentId: inst.id },
+        });
+      }
+      const base = await prisma.service.findFirst({ where: { category: d.category } });
+      if (base) {
+        await prisma.oduvarService.upsert({
+          where: { profileId_serviceId: { profileId: profile.id, serviceId: base.id } },
+          update: {}, create: { profileId: profile.id, serviceId: base.id },
+        });
+      }
+    }
+    console.log(`    ✓ ${demo.length} demo Oduvars (password: DemoOduvar#2026!)`);
+  }
+
   console.log('✅ Seeding completed successfully.');
 }
 

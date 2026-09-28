@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { TransportOption } from '@prisma/client';
-import { PERFORMANCE_TYPES, SONG_CATEGORIES } from '../common/constants/reference-data';
+import { EVENT_TYPES, PERFORMANCE_TYPES, SONG_CATEGORIES } from '../common/constants/reference-data';
 
 const performanceTypeValues = PERFORMANCE_TYPES as unknown as [string, ...string[]];
 const songCategoryKeys = SONG_CATEGORIES.map((c) => c.key) as [string, ...string[]];
+const eventTypeKeys = EVENT_TYPES.map((e) => e.key) as [string, ...string[]];
 const transportValues = Object.values(TransportOption) as [string, ...string[]];
 
 export const createOrUpdateProfileSchema = z.object({
@@ -19,6 +20,8 @@ export const createOrUpdateProfileSchema = z.object({
     .max(10, 'Too many song categories')
     .optional()
     .default([]),
+  // Optional without a default: omitting it leaves the stored value untouched.
+  eventTypes: z.array(z.enum(eventTypeKeys)).max(EVENT_TYPES.length).optional(),
   transport: z.nativeEnum(TransportOption).optional().default(TransportOption.TO_BE_DISCUSSED),
   collaborationEnabled: z.boolean().optional().default(true),
   isPublished: z.boolean().optional().default(false),

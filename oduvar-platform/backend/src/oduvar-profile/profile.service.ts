@@ -16,6 +16,7 @@ function toPublicProfile(raw: any) {
     location: profile.location,
     performanceTypes: profile.performanceTypes,
     songCategories: profile.songCategories,
+    eventTypes: profile.eventTypes ?? [],
     transport: profile.transport,
     collaborationEnabled: profile.collaborationEnabled,
     createdAt: profile.createdAt,

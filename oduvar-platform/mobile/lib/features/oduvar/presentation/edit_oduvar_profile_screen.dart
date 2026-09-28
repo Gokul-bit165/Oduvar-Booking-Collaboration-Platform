@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/auth/presentation/auth_state.dart';
-import '../models/oduvar_profile_model.dart';
 import 'oduvar_profile_state.dart';
 import 'oduvar_profile_view_screen.dart';
 import 'widgets/profile_widgets.dart';
@@ -32,6 +31,7 @@ class _EditOduvarProfileScreenState extends State<EditOduvarProfileScreen> {
   Set<String> _selectedInstrumentIds = {};
   Set<String> _selectedPerformanceTypes = {};
   Set<String> _selectedSongCategories = {};
+  Set<String> _selectedEventTypes = {};
   String _transport = 'TO_BE_DISCUSSED';
   bool _collaborationEnabled = true;
   bool _isPublished = false;
@@ -62,6 +62,7 @@ class _EditOduvarProfileScreenState extends State<EditOduvarProfileScreen> {
       _selectedInstrumentIds = p.instruments.map((i) => i.id).toSet();
       _selectedPerformanceTypes = Set.from(p.performanceTypes);
       _selectedSongCategories = Set.from(p.songCategories);
+      _selectedEventTypes = Set.from(p.eventTypes);
       _transport = p.transport;
       _collaborationEnabled = p.collaborationEnabled;
       _isPublished = p.isPublished;
@@ -92,6 +93,7 @@ class _EditOduvarProfileScreenState extends State<EditOduvarProfileScreen> {
       'instrumentIds': _selectedInstrumentIds.toList(),
       'performanceTypes': _selectedPerformanceTypes.toList(),
       'songCategories': _selectedSongCategories.toList(),
+      'eventTypes': _selectedEventTypes.toList(),
       'transport': _transport,
       'collaborationEnabled': _collaborationEnabled,
       'isPublished': _isPublished,
@@ -317,6 +319,15 @@ class _EditOduvarProfileScreenState extends State<EditOduvarProfileScreen> {
 
                 const SizedBox(height: 16),
 
+                // ── Event types (Phase 5 discovery filter) ───────────────────
+                _sectionCard(
+                  'Events You Serve',
+                  'Only pick events you genuinely perform at; clients can filter by these',
+                  [_buildEventTypeSelector()],
+                ),
+
+                const SizedBox(height: 16),
+
                 // ── Instruments ──────────────────────────────────────────────
                 _sectionCard(
                   'Instruments',
@@ -473,6 +484,35 @@ class _EditOduvarProfileScreenState extends State<EditOduvarProfileScreen> {
                   } else {
                     _selectedPerformanceTypes.add(type);
                   }
+                }),
+              ))
+          .toList(),
+    );
+  }
+
+  // ─── Event type selector ───────────────────────────────────────────────────
+
+  static const _eventTypes = {
+    'HOSPITAL': 'Hospital',
+    'BEDRIDDEN_PATIENT': 'Bedridden Patient',
+    'GENERAL': 'General',
+    'FUNCTION': 'Function',
+    'TEMPLE': 'Temple',
+    'FUNERAL': 'Funeral',
+    'OTHER': 'Other',
+  };
+
+  Widget _buildEventTypeSelector() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _eventTypes.entries
+          .map((e) => SelectableChip(
+                key: Key('event_chip_${e.key}'),
+                label: e.value,
+                selected: _selectedEventTypes.contains(e.key),
+                onTap: () => setState(() {
+                  if (!_selectedEventTypes.remove(e.key)) _selectedEventTypes.add(e.key);
                 }),
               ))
           .toList(),

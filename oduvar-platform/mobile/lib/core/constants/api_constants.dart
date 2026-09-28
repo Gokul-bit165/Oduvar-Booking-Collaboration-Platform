@@ -49,6 +49,12 @@ class ApiConstants {
   static String myAvailabilityOverride(String id) => '/oduvars/me/availability/overrides/$id';
   static String publicAvailability(String oduvarId) => '/oduvars/$oduvarId/availability';
 
+  // Discovery endpoints (Phase 5)
+  static const String oduvarSearch = '/oduvars';
+  static const String eventTypes = '/event-types';
+  static const String instruments = '/instruments';
+  static const String performanceTypes = '/performance-types';
+
   // Request timeouts
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);

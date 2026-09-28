@@ -80,6 +80,7 @@ class OduvarProfileModel {
   final String? location;
   final List<String> performanceTypes;
   final List<String> songCategories;
+  final List<String> eventTypes;
   final String transport;
   final bool collaborationEnabled;
   final ProfileOwnerModel owner;
@@ -95,6 +96,7 @@ class OduvarProfileModel {
     this.location,
     required this.performanceTypes,
     required this.songCategories,
+    this.eventTypes = const [],
     required this.transport,
     required this.collaborationEnabled,
     required this.owner,
@@ -112,6 +114,7 @@ class OduvarProfileModel {
       location: json['location'] as String?,
       performanceTypes: List<String>.from(json['performanceTypes'] as List? ?? []),
       songCategories: List<String>.from(json['songCategories'] as List? ?? []),
+      eventTypes: List<String>.from(json['eventTypes'] as List? ?? []),
       transport: json['transport'] as String? ?? 'TO_BE_DISCUSSED',
       collaborationEnabled: json['collaborationEnabled'] as bool? ?? true,
       owner: ProfileOwnerModel.fromJson(json['owner'] as Map<String, dynamic>),

@@ -77,6 +77,8 @@ model OduvarProfile {
   songCategories       String[]        @default([]) @map("song_categories")
   transport            TransportOption @default(TO_BE_DISCUSSED)
   collaborationEnabled Boolean         @default(true) @map("collaboration_enabled")
+  // Phase 5: event types the Oduvar has explicitly said they serve (empty until the Oduvar sets it)
+  eventTypes           String[]        @default([]) @map("event_types")
   // Phase 4: booking rules + schedule timezone (all schedule times are wall-clock in this IANA zone)
   minimumDurationMinutes Int           @default(30) @map("minimum_duration_minutes")
   maximumDurationMinutes Int           @default(180) @map("maximum_duration_minutes")
@@ -95,6 +97,7 @@ model OduvarProfile {
   weeklyAvailability OduvarWeeklyAvailability[]
   availabilityOverrides OduvarAvailabilityOverride[]
 
+  @@index([isPublished])
   @@map("oduvar_profiles")
 }
 
@@ -155,6 +158,7 @@ model OduvarProfileInstrument {
   instrument   Instrument    @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
   @@id([profileId, instrumentId])
+  @@index([instrumentId])
   @@map("oduvar_profile_instruments")
 }
 
@@ -192,6 +196,7 @@ model OduvarService {
   pricings          ServicePricing[]
 
   @@unique([profileId, serviceId])
+  @@index([serviceId, isActive])
   @@map("oduvar_services")
 }
 
@@ -366,6 +371,7 @@ model Review {
   client    User     @relation("ClientReviews", fields: [clientId], references: [id], onDelete: Cascade)
   oduvar    User     @relation("OduvarReviews", fields: [oduvarId], references: [id], onDelete: Cascade)
 
+  @@index([oduvarId])
   @@map("reviews")
 }
 

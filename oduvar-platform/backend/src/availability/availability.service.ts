@@ -249,6 +249,25 @@ export class AvailabilityService {
     return resolveWindowsForDate(weeklyWindows, rules);
   }
 
+  /** Bookable start times (minutes) for already-resolved windows; single place that calls the engine. */
+  private async slotStarts(
+    profile: OduvarProfile,
+    windows: Interval[],
+    date: string,
+    duration: number,
+    now: { date: string; minutes: number },
+    extraOccupied: Interval[] = []
+  ): Promise<number[]> {
+    const occupied = [...(await occupiedProvider(profile.id, date)), ...extraOccupied];
+    return getAvailableSlots({
+      windows,
+      durationMinutes: duration,
+      bufferMinutes: profile.bufferMinutes,
+      occupied,
+      earliestStart: date === now.date ? now.minutes : undefined,
+    });
+  }
+
   private async computeDay(
     profile: OduvarProfile,
     weekly: WeeklyRow[],
@@ -260,16 +279,7 @@ export class AvailabilityService {
   ) {
     const windows = this.windowsForDate(date, weekly, overrides);
     const isPast = date < now.date;
-    const occupied = isPast ? [] : await occupiedProvider(profile.id, date);
-    const slots = isPast
-      ? []
-      : getAvailableSlots({
-          windows,
-          durationMinutes: duration,
-          bufferMinutes: profile.bufferMinutes,
-          occupied,
-          earliestStart: date === now.date ? now.minutes : undefined,
-        });
+    const slots = isPast ? [] : await this.slotStarts(profile, windows, date, duration, now);
     const status: DayStatus = slots.length > 0 ? 'AVAILABLE' : 'UNAVAILABLE';
     return {
       date,
@@ -343,6 +353,44 @@ export class AvailabilityService {
   }
 
   /**
+   * Batch check used by discovery search: which of these Oduvars have at least one
+   * valid bookable slot on `date` (for `durationMinutes`, or their own minimum when omitted)?
+   * Uses the same engine as the calendar. Exactly two DB queries regardless of how many
+   * profiles are passed; each profile's rules (timezone, min/max duration, buffer) apply.
+   */
+  async filterAvailableProfiles(
+    profiles: OduvarProfile[],
+    date: string,
+    durationMinutes?: number,
+    now: Date = new Date()
+  ): Promise<Set<string>> {
+    const result = new Set<string>();
+    if (profiles.length === 0) return result;
+    const ids = profiles.map((p) => p.id);
+    const dow = dayOfWeekFor(date);
+    const [weeklyRows, overrideRows] = await Promise.all([
+      prisma.oduvarWeeklyAvailability.findMany({ where: { oduvarId: { in: ids }, dayOfWeek: dow, isActive: true } }),
+      prisma.oduvarAvailabilityOverride.findMany({ where: { oduvarId: { in: ids }, date: toDbDate(date) } }),
+    ]);
+    const weeklyBy = new Map<string, typeof weeklyRows>();
+    for (const r of weeklyRows) weeklyBy.set(r.oduvarId, [...(weeklyBy.get(r.oduvarId) ?? []), r]);
+    const overrideBy = new Map<string, typeof overrideRows>();
+    for (const r of overrideRows) overrideBy.set(r.oduvarId, [...(overrideBy.get(r.oduvarId) ?? []), r]);
+
+    for (const profile of profiles) {
+      const nowZ = nowInZone(profile.timezone, now);
+      if (date < nowZ.date) continue;
+      const duration = durationMinutes ?? profile.minimumDurationMinutes;
+      if (duration < profile.minimumDurationMinutes || duration > profile.maximumDurationMinutes) continue;
+      const windows = this.windowsForDate(date, weeklyBy.get(profile.id) ?? [], overrideBy.get(profile.id) ?? []);
+      if (windows.length === 0) continue;
+      const slots = await this.slotStarts(profile, windows, date, duration, nowZ);
+      if (slots.length > 0) result.add(profile.id);
+    }
+    return result;
+  }
+
+  /**
    * Reusable by the future booking engine: bookable start times for a date.
    * Callers may pass extra occupied intervals (e.g. confirmed bookings).
    */
@@ -359,14 +407,8 @@ export class AvailabilityService {
     const { weekly, overrides } = await this.load(profile);
     const nowZ = nowInZone(profile.timezone, now);
     if (date < nowZ.date) return [];
-    const occupied = [...(await occupiedProvider(profile.id, date)), ...extraOccupied];
-    return getAvailableSlots({
-      windows: this.windowsForDate(date, weekly, overrides),
-      durationMinutes: duration,
-      bufferMinutes: profile.bufferMinutes,
-      occupied,
-      earliestStart: date === nowZ.date ? nowZ.minutes : undefined,
-    }).map(formatTime);
+    const windows = this.windowsForDate(date, weekly, overrides);
+    return (await this.slotStarts(profile, windows, date, duration, nowZ, extraOccupied)).map(formatTime);
   }
 }
 

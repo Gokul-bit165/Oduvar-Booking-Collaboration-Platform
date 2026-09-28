@@ -68,3 +68,16 @@ export const PREDEFINED_SERVICES = [
   },
 ] as const;
 
+
+// Phase 5: Event types an Oduvar can declare support for (stored on OduvarProfile.eventTypes).
+// No Oduvar is pre-assigned any event type; the profile owner opts in.
+export const EVENT_TYPES = [
+  { key: 'HOSPITAL', label: 'Hospital' },
+  { key: 'BEDRIDDEN_PATIENT', label: 'Bedridden Patient' },
+  { key: 'GENERAL', label: 'General' },
+  { key: 'FUNCTION', label: 'Function' },
+  { key: 'TEMPLE', label: 'Temple' },
+  { key: 'FUNERAL', label: 'Funeral' },
+  { key: 'OTHER', label: 'Other' },
+] as const;
+export type EventType = typeof EVENT_TYPES[number]['key'];

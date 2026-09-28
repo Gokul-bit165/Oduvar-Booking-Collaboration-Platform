@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { ApiResponse } from '../common/dto/api-response';
-import { PERFORMANCE_TYPES, SONG_CATEGORIES } from '../common/constants/reference-data';
+import { EVENT_TYPES, PERFORMANCE_TYPES, SONG_CATEGORIES } from '../common/constants/reference-data';
 
 export const referenceRouter = Router();
 
@@ -57,3 +57,8 @@ referenceRouter.get('/services', async (_req: Request, res: Response) => {
   }
 });
 
+
+// GET /api/event-types
+referenceRouter.get('/event-types', (_req: Request, res: Response) => {
+  ApiResponse.success(res, { eventTypes: EVENT_TYPES });
+});

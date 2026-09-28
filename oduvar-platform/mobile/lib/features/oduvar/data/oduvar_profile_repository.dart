@@ -13,7 +13,7 @@ class OduvarProfileRepository {
   // ─── My Profile ───────────────────────────────────────────────────────────
 
   Future<OduvarProfileModel?> getMyProfile(String token) async {
-    final data = await _client.get('/api/oduvars/me/profile', token: token);
+    final data = await _client.get('/oduvars/me/profile', token: token);
     final profileJson = data['profile'];
     if (profileJson == null) return null;
     return OduvarProfileModel.fromJson(profileJson as Map<String, dynamic>);
@@ -22,7 +22,7 @@ class OduvarProfileRepository {
   Future<OduvarProfileModel> createProfile(
       String token, Map<String, dynamic> payload) async {
     final data = await _client.post(
-      '/api/oduvars/me/profile',
+      '/oduvars/me/profile',
       token: token,
       body: payload,
     );
@@ -33,7 +33,7 @@ class OduvarProfileRepository {
   Future<OduvarProfileModel> updateProfile(
       String token, Map<String, dynamic> payload) async {
     final data = await _client.put(
-      '/api/oduvars/me/profile',
+      '/oduvars/me/profile',
       token: token,
       body: payload,
     );
@@ -42,14 +42,14 @@ class OduvarProfileRepository {
   }
 
   Future<void> deleteProfile(String token) async {
-    await _client.delete('/api/oduvars/me/profile', token: token);
+    await _client.delete('/oduvars/me/profile', token: token);
   }
 
   // ─── Public Profile ───────────────────────────────────────────────────────
 
   Future<OduvarProfileModel> getPublicProfile(String oduvarId) async {
     final data =
-        await _client.get('/api/oduvars/$oduvarId/profile');
+        await _client.get('/oduvars/$oduvarId/profile');
     return OduvarProfileModel.fromJson(
         data['profile'] as Map<String, dynamic>);
   }
@@ -57,7 +57,7 @@ class OduvarProfileRepository {
   // ─── Photos ───────────────────────────────────────────────────────────────
 
   Future<OduvarPhotoModel> uploadPhoto(String token, File imageFile) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/api/oduvars/me/profile/photos');
+    final uri = Uri.parse('${ApiConstants.baseUrl}/oduvars/me/profile/photos');
     final request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer $token';
     request.files.add(await http.MultipartFile.fromPath('photo', imageFile.path));
@@ -76,13 +76,13 @@ class OduvarProfileRepository {
 
   Future<void> deletePhoto(String token, String photoId) async {
     await _client.delete(
-        '/api/oduvars/me/profile/photos/$photoId', token: token);
+        '/oduvars/me/profile/photos/$photoId', token: token);
   }
 
   Future<void> reorderPhotos(
       String token, List<Map<String, dynamic>> photos) async {
     await _client.put(
-      '/api/oduvars/me/profile/photos/reorder',
+      '/oduvars/me/profile/photos/reorder',
       token: token,
       body: {'photos': photos},
     );
@@ -91,28 +91,28 @@ class OduvarProfileRepository {
   // ─── Reference data ───────────────────────────────────────────────────────
 
   Future<List<SkillModel>> getSkills() async {
-    final data = await _client.get('/api/skills');
+    final data = await _client.get('/skills');
     return (data['skills'] as List)
         .map((s) => SkillModel.fromJson(s as Map<String, dynamic>))
         .toList();
   }
 
   Future<List<InstrumentModel>> getInstruments() async {
-    final data = await _client.get('/api/instruments');
+    final data = await _client.get('/instruments');
     return (data['instruments'] as List)
         .map((i) => InstrumentModel.fromJson(i as Map<String, dynamic>))
         .toList();
   }
 
   Future<List<Map<String, String>>> getSongCategories() async {
-    final data = await _client.get('/api/song-categories');
+    final data = await _client.get('/song-categories');
     return (data['songCategories'] as List)
         .map((c) => Map<String, String>.from(c as Map))
         .toList();
   }
 
   Future<List<String>> getPerformanceTypes() async {
-    final data = await _client.get('/api/performance-types');
+    final data = await _client.get('/performance-types');
     return (data['performanceTypes'] as List)
         .map((t) => (t as Map)['key'] as String)
         .toList();

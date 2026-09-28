@@ -6,6 +6,7 @@ import { authRouter } from './auth/auth.routes';
 import { oduvarProfileRouter, oduvarPublicRouter } from './oduvar-profile/profile.routes';
 import { oduvarServiceRouter, oduvarServicePublicRouter } from './oduvar-service/service.routes';
 import { availabilityRouter, availabilityPublicRouter } from './availability/availability.routes';
+import { discoveryRouter } from './oduvar-discovery/discovery.routes';
 import { referenceRouter } from './reference/reference.routes';
 import { errorHandler } from './common/middleware/error.middleware';
 import { ApiResponse } from './common/dto/api-response';
@@ -36,7 +37,7 @@ export function createApp(): Application {
       status: 'OK',
       timestamp: new Date().toISOString(),
       service: 'Online Oduvar Booking & Collaboration Platform API',
-      version: '4.0.0-phase4',
+      version: '5.0.0-phase5',
     });
   });
 
@@ -46,6 +47,7 @@ export function createApp(): Application {
   app.use('/api/oduvars', oduvarPublicRouter);
   app.use('/api/oduvars', oduvarServiceRouter);
   app.use('/api/oduvars', oduvarServicePublicRouter);
+  app.use('/api/oduvars', discoveryRouter);
   app.use('/api/oduvars', availabilityRouter);
   app.use('/api/oduvars', availabilityPublicRouter);
   app.use('/api', referenceRouter);

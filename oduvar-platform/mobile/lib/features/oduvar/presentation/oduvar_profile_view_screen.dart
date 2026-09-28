@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:oduvar_mobile/core/theme/app_theme.dart';
 import 'package:oduvar_mobile/features/services/models/service_model.dart';
 import 'package:oduvar_mobile/features/services/presentation/widgets/public_services_section.dart';
+import 'package:oduvar_mobile/features/availability/data/availability_repository.dart';
 import 'package:oduvar_mobile/features/availability/presentation/availability_state.dart';
 import 'package:oduvar_mobile/features/availability/presentation/public_availability_screen.dart';
 import '../models/oduvar_profile_model.dart';
@@ -17,13 +18,22 @@ class OduvarProfileViewScreen extends StatelessWidget {
   /// User id of the Oduvar (public availability is keyed by it). Enables the availability button.
   final String? oduvarUserId;
 
+  /// Injectable for tests; defaults to the real API.
+  final AvailabilityRepository? availabilityRepository;
+
   const OduvarProfileViewScreen({
     super.key,
     required this.profile,
     this.isPreviewMode = false,
     this.services,
     this.oduvarUserId,
+    this.availabilityRepository,
   });
+
+  static String _eventLabel(String key) => key
+      .split('_')
+      .map((w) => w.isEmpty ? w : w[0] + w.substring(1).toLowerCase())
+      .join(' ');
 
   Widget _buildAvailabilityButton(BuildContext context) {
     return OutlinedButton.icon(
@@ -33,7 +43,7 @@ class OduvarProfileViewScreen extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => PublicAvailabilityScreen(
             oduvarId: oduvarUserId!,
-            availabilityState: AvailabilityState(),
+            availabilityState: AvailabilityState(repository: availabilityRepository),
           ),
         ),
       ),
@@ -96,6 +106,13 @@ class OduvarProfileViewScreen extends StatelessWidget {
                   ],
                   if (profile.photos.isNotEmpty) ...[
                     _buildSection('Gallery', _buildGallery()),
+                    const SizedBox(height: 20),
+                  ],
+                  if (profile.eventTypes.isNotEmpty) ...[
+                    _buildSection('Events Served', _buildChips(
+                      profile.eventTypes.map(_eventLabel).toList(),
+                      const Color(0xFF7C3AED),
+                    )),
                     const SizedBox(height: 20),
                   ],
                   _buildSection('Transport', _buildTransportInfo()),
