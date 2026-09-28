@@ -7,6 +7,8 @@ import '../presentation/oduvar_profile_view_screen.dart';
 import '../models/oduvar_profile_model.dart';
 import '../../services/presentation/oduvar_service_state.dart';
 import '../../services/presentation/my_services_screen.dart';
+import '../../availability/presentation/availability_state.dart';
+import '../../availability/presentation/availability_settings_screen.dart';
 import 'widgets/profile_widgets.dart';
 
 class OduvarDashboardScreen extends StatefulWidget {
@@ -305,6 +307,7 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
                       builder: (_) => OduvarProfileViewScreen(
                         profile: profile,
                         isPreviewMode: true,
+                        oduvarUserId: widget.authState.currentUser?.id,
                       ),
                     ),
                   ),
@@ -353,7 +356,27 @@ class _OduvarDashboardScreenState extends State<OduvarDashboardScreen> {
           subtitle: 'Define devotional services, durations and honorarium',
           onTap: _openMyServices,
         ),
+        const SizedBox(height: 8),
+        _quickActionTile(
+          icon: Icons.calendar_month_outlined,
+          title: 'Availability & Calendar',
+          subtitle: 'Set working hours, blocked dates and booking limits',
+          onTap: _openAvailability,
+        ),
       ],
+    );
+  }
+
+  Future<void> _openAvailability() async {
+    final availabilityState = AvailabilityState();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AvailabilitySettingsScreen(
+          availabilityState: availabilityState,
+          authState: widget.authState,
+        ),
+      ),
     );
   }
 

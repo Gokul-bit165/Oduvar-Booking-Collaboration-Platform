@@ -42,6 +42,13 @@ class ApiConstants {
   static String servicePricingItem(String serviceId, String pricingId) =>
       '/oduvars/me/services/$serviceId/pricing/$pricingId';
 
+  // Availability endpoints (Phase 4)
+  static const String myAvailability = '/oduvars/me/availability';
+  static const String myWeeklyAvailability = '/oduvars/me/availability/weekly';
+  static const String myAvailabilityOverrides = '/oduvars/me/availability/overrides';
+  static String myAvailabilityOverride(String id) => '/oduvars/me/availability/overrides/$id';
+  static String publicAvailability(String oduvarId) => '/oduvars/$oduvarId/availability';
+
   // Request timeouts
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);

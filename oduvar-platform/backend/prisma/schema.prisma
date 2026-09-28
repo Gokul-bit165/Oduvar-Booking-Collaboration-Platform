@@ -16,6 +16,21 @@ enum Role {
   ADMIN
 }
 
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum OverrideType {
+  UNAVAILABLE
+  AVAILABLE
+}
+
 enum TransportOption {
   INCLUDED
   NOT_INCLUDED
@@ -62,6 +77,11 @@ model OduvarProfile {
   songCategories       String[]        @default([]) @map("song_categories")
   transport            TransportOption @default(TO_BE_DISCUSSED)
   collaborationEnabled Boolean         @default(true) @map("collaboration_enabled")
+  // Phase 4: booking rules + schedule timezone (all schedule times are wall-clock in this IANA zone)
+  minimumDurationMinutes Int           @default(30) @map("minimum_duration_minutes")
+  maximumDurationMinutes Int           @default(180) @map("maximum_duration_minutes")
+  bufferMinutes        Int             @default(0) @map("buffer_minutes")
+  timezone             String          @default("Asia/Kolkata")
   isPublished          Boolean         @default(false) @map("is_published")
   createdAt            DateTime        @default(now()) @map("created_at")
   updatedAt            DateTime        @updatedAt @map("updated_at")
@@ -72,6 +92,8 @@ model OduvarProfile {
   instruments  OduvarProfileInstrument[]
   availabilities Availability[]
   services     OduvarService[]
+  weeklyAvailability OduvarWeeklyAvailability[]
+  availabilityOverrides OduvarAvailabilityOverride[]
 
   @@map("oduvar_profiles")
 }
@@ -187,6 +209,46 @@ model ServicePricing {
 
   @@unique([oduvarServiceId, durationMinutes])
   @@map("service_pricings")
+}
+
+// =============================================================================
+// Phase 4: Availability
+// =============================================================================
+
+// One row per working window. A day may have several rows (split shifts).
+// Times are "HH:mm" wall-clock strings in the profile's timezone.
+model OduvarWeeklyAvailability {
+  id        String        @id @default(uuid()) @db.Uuid
+  oduvarId  String        @map("oduvar_id") @db.Uuid
+  dayOfWeek DayOfWeek     @map("day_of_week")
+  startTime String        @map("start_time")
+  endTime   String        @map("end_time")
+  isActive  Boolean       @default(true) @map("is_active")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  oduvar    OduvarProfile @relation(fields: [oduvarId], references: [id], onDelete: Cascade)
+
+  @@index([oduvarId, dayOfWeek])
+  @@map("oduvar_weekly_availability")
+}
+
+// startTime/endTime null => whole day (only valid for UNAVAILABLE).
+model OduvarAvailabilityOverride {
+  id        String        @id @default(uuid()) @db.Uuid
+  oduvarId  String        @map("oduvar_id") @db.Uuid
+  date      DateTime      @db.Date
+  type      OverrideType
+  startTime String?       @map("start_time")
+  endTime   String?       @map("end_time")
+  reason    String?       @db.VarChar(200)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  oduvar    OduvarProfile @relation(fields: [oduvarId], references: [id], onDelete: Cascade)
+
+  @@index([oduvarId, date])
+  @@map("oduvar_availability_overrides")
 }
 
 // =============================================================================

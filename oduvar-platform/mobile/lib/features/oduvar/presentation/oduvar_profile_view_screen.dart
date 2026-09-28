@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:oduvar_mobile/core/theme/app_theme.dart';
 import 'package:oduvar_mobile/features/services/models/service_model.dart';
 import 'package:oduvar_mobile/features/services/presentation/widgets/public_services_section.dart';
+import 'package:oduvar_mobile/features/availability/presentation/availability_state.dart';
+import 'package:oduvar_mobile/features/availability/presentation/public_availability_screen.dart';
 import '../models/oduvar_profile_model.dart';
 import 'widgets/profile_widgets.dart';
 
@@ -12,12 +14,33 @@ class OduvarProfileViewScreen extends StatelessWidget {
   final bool isPreviewMode;
   final List<OduvarServiceModel>? services;
 
+  /// User id of the Oduvar (public availability is keyed by it). Enables the availability button.
+  final String? oduvarUserId;
+
   const OduvarProfileViewScreen({
     super.key,
     required this.profile,
     this.isPreviewMode = false,
     this.services,
+    this.oduvarUserId,
   });
+
+  Widget _buildAvailabilityButton(BuildContext context) {
+    return OutlinedButton.icon(
+      key: const Key('view_availability_button'),
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PublicAvailabilityScreen(
+            oduvarId: oduvarUserId!,
+            availabilityState: AvailabilityState(),
+          ),
+        ),
+      ),
+      icon: const Icon(Icons.calendar_month_outlined, size: 18),
+      label: const Text('View Availability Calendar'),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +107,10 @@ class OduvarProfileViewScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   if (services != null && services!.isNotEmpty) ...[
                     PublicServicesSection(services: services!),
+                    const SizedBox(height: 20),
+                  ],
+                  if (oduvarUserId != null) ...[
+                    _buildSection('Availability', _buildAvailabilityButton(context)),
                     const SizedBox(height: 20),
                   ],
                   const SizedBox(height: 12),
