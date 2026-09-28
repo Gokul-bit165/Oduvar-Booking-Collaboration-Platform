@@ -1,0 +1,275 @@
+// Prisma schema for Online Oduvar Booking & Collaboration Platform
+// Phase 2: Oduvar Profile System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  ODUVAR
+  ADMIN
+}
+
+enum TransportOption {
+  INCLUDED
+  NOT_INCLUDED
+  ADDITIONAL_FEE
+  TO_BE_DISCUSSED
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  email        String    @unique
+  phone        String
+  passwordHash String    @map("password_hash")
+  role         Role
+  profilePhoto String?   @map("profile_photo")
+  tokenVersion Int       @default(0) @map("token_version")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  oduvarProfile   OduvarProfile?
+  clientBookings  Booking[]        @relation("ClientBookings")
+  oduvarBookings  Booking[]        @relation("OduvarBookings")
+  sentCollabs     Collaboration[]  @relation("SentCollaborations")
+  receivedCollabs Collaboration[]  @relation("ReceivedCollaborations")
+  sentMessages    Message[]        @relation("SentMessages")
+  reviewsGiven    Review[]         @relation("ClientReviews")
+  reviewsReceived Review[]         @relation("OduvarReviews")
+  notifications   Notification[]
+  reportsFiled    Report[]         @relation("ReportsFiled")
+
+  @@map("users")
+}
+
+// =============================================================================
+// Phase 2: Oduvar Profile System
+// =============================================================================
+
+model OduvarProfile {
+  id                   String          @id @default(uuid()) @db.Uuid
+  userId               String          @unique @map("user_id") @db.Uuid
+  bio                  String?         @db.VarChar(1000)
+  location             String?         @db.VarChar(200)
+  performanceTypes     String[]        @default([]) @map("performance_types")
+  songCategories       String[]        @default([]) @map("song_categories")
+  transport            TransportOption @default(TO_BE_DISCUSSED)
+  collaborationEnabled Boolean         @default(true) @map("collaboration_enabled")
+  isPublished          Boolean         @default(false) @map("is_published")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos       OduvarPhoto[]
+  skills       OduvarProfileSkill[]
+  instruments  OduvarProfileInstrument[]
+  availabilities Availability[]
+
+  @@map("oduvar_profiles")
+}
+
+model OduvarPhoto {
+  id           String        @id @default(uuid()) @db.Uuid
+  profileId    String        @map("profile_id") @db.Uuid
+  imageUrl     String        @map("image_url")
+  displayOrder Int           @default(1) @map("display_order")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  profile      OduvarProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("oduvar_photos")
+}
+
+model Skill {
+  id          String               @id @default(uuid()) @db.Uuid
+  name        String               @unique
+  slug        String               @unique
+  isPredefined Boolean             @default(true) @map("is_predefined")
+  sortOrder   Int                  @default(0) @map("sort_order")
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  profiles    OduvarProfileSkill[]
+
+  @@map("skills")
+}
+
+model OduvarProfileSkill {
+  profileId String        @map("profile_id") @db.Uuid
+  skillId   String        @map("skill_id") @db.Uuid
+
+  profile   OduvarProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill     Skill         @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, skillId])
+  @@map("oduvar_profile_skills")
+}
+
+model Instrument {
+  id          String                    @id @default(uuid()) @db.Uuid
+  name        String                    @unique
+  slug        String                    @unique
+  isPredefined Boolean                  @default(true) @map("is_predefined")
+  sortOrder   Int                       @default(0) @map("sort_order")
+  createdAt   DateTime                  @default(now()) @map("created_at")
+
+  profiles    OduvarProfileInstrument[]
+
+  @@map("instruments")
+}
+
+model OduvarProfileInstrument {
+  profileId    String        @map("profile_id") @db.Uuid
+  instrumentId String        @map("instrument_id") @db.Uuid
+
+  profile      OduvarProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  instrument   Instrument    @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, instrumentId])
+  @@map("oduvar_profile_instruments")
+}
+
+// =============================================================================
+// Future Entities (Phases 3–10 stubs)
+// =============================================================================
+
+model Availability {
+  id        String        @id @default(uuid()) @db.Uuid
+  profileId String        @map("profile_id") @db.Uuid
+  date      DateTime?     @db.Date
+  dayOfWeek Int?          @map("day_of_week")
+  startTime String        @map("start_time")
+  endTime   String        @map("end_time")
+  status    String        @default("AVAILABLE")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  profile   OduvarProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("availabilities")
+}
+
+model Booking {
+  id          String   @id @default(uuid()) @db.Uuid
+  clientId    String   @map("client_id") @db.Uuid
+  oduvarId    String   @map("oduvar_id") @db.Uuid
+  date        DateTime @db.Date
+  startTime   String   @map("start_time")
+  duration    Int
+  songType    String   @map("song_type")
+  eventType   String   @map("event_type")
+  description String
+  location    String
+  phone1      String
+  phone2      String?
+  transport   String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  client      User     @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
+  oduvar      User     @relation("OduvarBookings", fields: [oduvarId], references: [id], onDelete: Cascade)
+  reviews     Review[]
+
+  @@map("bookings")
+}
+
+model Collaboration {
+  id               String   @id @default(uuid()) @db.Uuid
+  senderOduvarId   String   @map("sender_oduvar_id") @db.Uuid
+  receiverOduvarId String   @map("receiver_oduvar_id") @db.Uuid
+  eventType        String   @map("event_type")
+  date             DateTime @db.Date
+  time             String
+  duration         Int
+  location         String
+  performanceType  String   @map("performance_type")
+  message          String
+  status           String   @default("PENDING")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  sender           User     @relation("SentCollaborations", fields: [senderOduvarId], references: [id], onDelete: Cascade)
+  receiver         User     @relation("ReceivedCollaborations", fields: [receiverOduvarId], references: [id], onDelete: Cascade)
+
+  @@map("collaborations")
+}
+
+model Conversation {
+  id           String    @id @default(uuid()) @db.Uuid
+  participantA String    @map("participant_a") @db.Uuid
+  participantB String    @map("participant_b") @db.Uuid
+  type         String    @default("DIRECT")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  senderId       String       @map("sender_id") @db.Uuid
+  message        String
+  readAt         DateTime?    @map("read_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  bookingId String   @unique @map("booking_id") @db.Uuid
+  clientId  String   @map("client_id") @db.Uuid
+  oduvarId  String   @map("oduvar_id") @db.Uuid
+  rating    Int
+  review    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client    User     @relation("ClientReviews", fields: [clientId], references: [id], onDelete: Cascade)
+  oduvar    User     @relation("OduvarReviews", fields: [oduvarId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Report {
+  id         String   @id @default(uuid()) @db.Uuid
+  reporterId String   @map("reporter_id") @db.Uuid
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  reason     String
+  status     String   @default("OPEN")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  reporter   User     @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
